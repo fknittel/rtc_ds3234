@@ -22,6 +22,8 @@ DS3234_REG_DAY		= 0x03
 DS3234_REG_DATE		= 0x04
 DS3234_REG_MONTH	= 0x05
 DS3234_REG_YEAR		= 0x06
+DS3234_REG_CONTROL	= 0x0E
+DS3234_REG_CONT_STAT	= 0x0F
 
 DS3234_24HRS = 0x40
 
@@ -52,17 +54,35 @@ def init_spi(dev_fp):
     fcntl.ioctl(dev_fp.fileno(), SPI_IOC_WR_MODE, data)
     fcntl.ioctl(dev_fp.fileno(), SPI_IOC_RD_MODE, data)
 
+    data = chr(8)
+    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_WR_BITS_PER_WORD, data)
+    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_RD_BITS_PER_WORD, data)
+
+    tmp = _get_reg(dev_fp, DS3234_REG_CONTROL, 1)[0]
+    _set_reg(dev_fp, DS3234_REG_CONTROL, tmp & 0x1c)
+
+    tmp = _get_reg(dev_fp, DS3234_REG_CONT_STAT, 1)[0]
+    _set_reg(dev_fp, DS3234_REG_CONT_STAT, tmp & 0x88)
+
 def get_time(dev_fp):
-    dev_fp.write('\x00')
-    dt_buf = [ord(dt_val) for dt_val in _read_data(dev_fp, 7)]
+    dt_buf = _get_reg(dev_fp, 0, 7)
     tm_sec = bcd2bin(dt_buf[0])
     tm_min = bcd2bin(dt_buf[1])
     tm_hour = bcd2bin(dt_buf[2] & 0x3f)
     tm_mday = bcd2bin(dt_buf[4])
     tm_mon = bcd2bin(dt_buf[5] & 0x1f)
     tm_year = bcd2bin(dt_buf[6]) + 2000
-    return datetime.datetime(tm_year, tm_mon, tm_mday, tm_hour, tm_min,
-        tm_sec)
+    try:
+        return datetime.datetime(tm_year, tm_mon, tm_mday, tm_hour, tm_min,
+                tm_sec)
+    except ValueError:
+        print >>sys.stderr, 'RTC information corrupt: year:{0} month{1}, day:{2} hour:{3} minute:{3} second:{4}'.format(
+                tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec)
+	sys.exit(1)
+
+def _get_reg(dev_fp, addr, len):
+    dev_fp.write(chr(addr))
+    return [ord(data) for data in _read_data(dev_fp, len)]
 
 def _set_reg(dev_fp, addr, val):
     data = chr(addr | 0x80)
