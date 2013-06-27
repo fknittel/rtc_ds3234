@@ -8,20 +8,25 @@ import settimeofday
 RTC_SPI_DEVICE = '/dev/spidev2.0'
 
 def show_usage():
-    print >>sys.stderr, "Usage: {0} read-rtc|write-rtc".format(sys.argv[0])
+    print >>sys.stderr, "Usage: {0} --hctosys|--systohc|--show".format(sys.argv[0])
     sys.exit(1)
 
 if len(sys.argv) != 2:
     show_usage()
 
 mode = sys.argv[1]
-if mode == 'read-rtc':
+if mode == '--hctosys':
     with open(RTC_SPI_DEVICE, 'a+') as dev:
 	rtc_ds3234.init_spi(dev)
         dt = rtc_ds3234.get_time(dev)
-    print "Reading date and time from RTC: {0}".format(dt)
+    print "Setting date and time from RTC: {0}".format(dt)
     settimeofday.settimeofday(dt)
-elif mode == 'write-rtc':
+elif mode == '--show':
+    with open(RTC_SPI_DEVICE, 'a+') as dev:
+	rtc_ds3234.init_spi(dev)
+        dt = rtc_ds3234.get_time(dev)
+    print "Date and time in RTC: {0}".format(dt)
+elif mode == '--systohc':
     dt = datetime.datetime.now()
     print "Writing date and time to RTC: {0}".format(dt)
     with open(RTC_SPI_DEVICE, 'a+') as dev:
