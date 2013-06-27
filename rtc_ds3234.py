@@ -1,5 +1,11 @@
 from bcd import bcd2bin, bin2bcd
 import datetime
+import fcntl
+
+SPI_IOC_WR_MODE = 0x40016b01
+SPI_IOC_RD_MODE = 0x80016b01
+SPI_IOC_WR_BITS_PER_WORD = 0x40016b03
+SPI_IOC_RD_BITS_PER_WORD = 0x80016b03
 
 DS3234_REG_SECONDS	= 0x00
 DS3234_REG_MINUTES	= 0x01
@@ -20,6 +26,11 @@ def _read_data(dev_fp, num_bytes=0):
         raise Ds3234SpiCommunicationError('SPI read failed with status ' + \
                 repr(data[0]))
     return data[1:]
+
+def init_spi(dev_fp):
+    data = chr(3)
+    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_WR_MODE, data)
+    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_RD_MODE, data)
 
 def get_time(dev_fp):
     dev_fp.write('\x00')
