@@ -30,19 +30,16 @@ def get_time(dev_fp):
     tm_mday = bcd2bin(dt_buf[4])
     tm_mon = bcd2bin(dt_buf[5] & 0x1f)
     tm_year = bcd2bin(dt_buf[6]) + 2000
-    print (tm_year, tm_mon, tm_mday, tm_hour, tm_min,
-        tm_sec)
     return datetime.datetime(tm_year, tm_mon, tm_mday, tm_hour, tm_min,
         tm_sec)
 
-def _set_reg(dev_fp, reg, val):
-    data = chr(reg | 0x80)
+def _set_reg(dev_fp, addr, val):
+    data = chr(addr | 0x80)
     data += chr(val)
     dev_fp.write(data)
     _read_data(dev_fp)
 
 def set_time(dev_fp, dt):
-    print (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
     _set_reg(dev_fp, DS3234_REG_SECONDS, bin2bcd(dt.second))
     _set_reg(dev_fp, DS3234_REG_MINUTES, bin2bcd(dt.minute))
     _set_reg(dev_fp, DS3234_REG_HOURS, (bin2bcd(dt.hour) & 0x3f) | DS3234_24HRS)
