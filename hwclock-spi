@@ -113,6 +113,10 @@ def settimeofday(dt_utc):
     sec_since_epoc = (dt_utc - datetime.datetime(1970, 1, 1)).total_seconds()
     _settimeofday(int(sec_since_epoc))
 
+def get_dt_from_device():
+    with open(RTC_SPI_DEVICE, 'a+') as dev:
+	init_spi(dev)
+        return get_time(dev)
 
 def show_usage():
     print >>sys.stderr, "Usage: {0} --hctosys|--systohc|--show".format(sys.argv[0])
@@ -123,16 +127,18 @@ if len(sys.argv) != 2:
 
 mode = sys.argv[1]
 if mode == '--hctosys':
-    with open(RTC_SPI_DEVICE, 'a+') as dev:
-	init_spi(dev)
-        dt = get_time(dev)
+    dt = get_dt_from_device()
     print "Setting date and time from RTC: {0}".format(dt)
     settimeofday(dt)
 elif mode == '--show':
-    with open(RTC_SPI_DEVICE, 'a+') as dev:
-	init_spi(dev)
-        dt = get_time(dev)
+    dt = get_dt_from_device()
     print "Date and time in RTC: {0}".format(dt)
+elif mode == '--show-delta':
+    dt = get_dt_from_device()
+    now = datetime.datetime.now()
+    print "Date and time in system: {0}".format(now)
+    print "Date and time in RTC:    {0}".format(dt)
+    print "Delta between RTC and system: {0}".format((dt - now).total_seconds())
 elif mode == '--systohc':
     dt = datetime.datetime.now()
     print "Writing date and time to RTC: {0}".format(dt)
