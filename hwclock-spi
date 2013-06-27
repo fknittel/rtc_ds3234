@@ -25,8 +25,6 @@ DS3234_REG_YEAR		= 0x06
 DS3234_REG_CONTROL	= 0x0E
 DS3234_REG_CONT_STAT	= 0x0F
 
-DS3234_24HRS = 0x40
-
 
 class BcdOutOfRange(Exception):
     pass
@@ -93,7 +91,7 @@ def _set_reg(dev_fp, addr, val):
 def set_time(dev_fp, dt):
     _set_reg(dev_fp, DS3234_REG_SECONDS, bin2bcd(dt.second))
     _set_reg(dev_fp, DS3234_REG_MINUTES, bin2bcd(dt.minute))
-    _set_reg(dev_fp, DS3234_REG_HOURS, (bin2bcd(dt.hour) & 0x3f) | DS3234_24HRS)
+    _set_reg(dev_fp, DS3234_REG_HOURS, (bin2bcd(dt.hour) & 0x3f))
     _set_reg(dev_fp, DS3234_REG_DAY, bin2bcd(dt.isoweekday()))
     _set_reg(dev_fp, DS3234_REG_DATE, bin2bcd(dt.day))
     _set_reg(dev_fp, DS3234_REG_MONTH, bin2bcd(dt.month) & 0x1f)
