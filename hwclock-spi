@@ -1,13 +1,14 @@
 #!/usr/bin/python
 # vim:set ts=4 sw=4 et:
 
+import os
 import datetime
 import sys
 import datetime
 import fcntl
 from ctypes import cdll, c_int, POINTER, c_void_p, Structure
 import datetime
-
+from contextlib import contextmanager
 
 RTC_SPI_DEVICE = '/dev/spidev2.0'
 
@@ -42,29 +43,38 @@ class Ds3234SpiCommunicationError(Exception):
     pass
 
 def _read_data(dev_fp, num_bytes=0):
-    data = dev_fp.read(num_bytes + 1)
+    data = os.read(dev_fp.fileno(), num_bytes + 1)
     if data[0] != '\xff':
         raise Ds3234SpiCommunicationError('SPI read failed with status ' + \
                 repr(data[0]))
     return data[1:]
 
+def spi_ioctl_write(dev_fp, operation, value):
+    data = chr(value)
+    fcntl.ioctl(dev_fp.fileno(), operation, data)
+
+def spi_ioctl_read(dev_fp, operation):
+    data = chr(0)
+    data = fcntl.ioctl(dev_fp.fileno(), operation, data)
+    return ord(data[0])
+
+@contextmanager
+def open_spi(dev_fn):
+    with open(dev_fn, 'r+b') as fp:
+        yield fp
+
 def init_spi(dev_fp):
-    data = chr(3)
-    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_WR_MODE, data)
-    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_RD_MODE, data)
+    spi_ioctl_write(dev_fp, SPI_IOC_WR_MODE, 3)
+    spi_ioctl_write(dev_fp, SPI_IOC_WR_BITS_PER_WORD, 8)
 
-    data = chr(8)
-    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_WR_BITS_PER_WORD, data)
-    fcntl.ioctl(dev_fp.fileno(), SPI_IOC_RD_BITS_PER_WORD, data)
-
-    tmp = _get_reg(dev_fp, DS3234_REG_CONTROL, 1)[0]
+    tmp = _get_reg(dev_fp, DS3234_REG_CONTROL)
     _set_reg(dev_fp, DS3234_REG_CONTROL, tmp & 0x1c)
 
-    tmp = _get_reg(dev_fp, DS3234_REG_CONT_STAT, 1)[0]
+    tmp = _get_reg(dev_fp, DS3234_REG_CONT_STAT)
     _set_reg(dev_fp, DS3234_REG_CONT_STAT, tmp & 0x88)
 
 def get_time(dev_fp):
-    dt_buf = _get_reg(dev_fp, 0, 7)
+    dt_buf = _get_regs(dev_fp, 0, 7)
     tm_sec = bcd2bin(dt_buf[0])
     tm_min = bcd2bin(dt_buf[1])
     tm_hour = bcd2bin(dt_buf[2] & 0x3f)
@@ -79,14 +89,17 @@ def get_time(dev_fp):
                 tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec)
         sys.exit(1)
 
-def _get_reg(dev_fp, addr, len):
-    dev_fp.write(chr(addr))
+def _get_regs(dev_fp, addr, len):
+    os.write(dev_fp.fileno(), chr(addr))
     return [ord(data) for data in _read_data(dev_fp, len)]
+
+def _get_reg(dev_fp, addr):
+    return _get_regs(dev_fp, addr, 1)[0]
 
 def _set_reg(dev_fp, addr, val):
     data = chr(addr | 0x80)
     data += chr(val)
-    dev_fp.write(data)
+    os.write(dev_fp.fileno(), data)
     _read_data(dev_fp)
 
 def set_time(dev_fp, dt):
@@ -113,8 +126,8 @@ def settimeofday(dt_utc):
     _settimeofday(int(sec_since_epoc))
 
 def get_dt_from_device():
-    with open(RTC_SPI_DEVICE, 'a+') as dev:
-	init_spi(dev)
+    with open_spi(RTC_SPI_DEVICE) as dev:
+        init_spi(dev)
         return get_time(dev)
 
 def show_usage():
@@ -141,8 +154,8 @@ elif mode == '--show-delta':
 elif mode == '--systohc':
     dt = datetime.datetime.now()
     print "Writing date and time to RTC: {0}".format(dt)
-    with open(RTC_SPI_DEVICE, 'a+') as dev:
-	init_spi(dev)
+    with open(RTC_SPI_DEVICE, 'r+b') as dev:
+        init_spi(dev)
         set_time(dev, dt)
 else:
     print >>sys.stderr, "error: unknown mode {0}".format(mode)
