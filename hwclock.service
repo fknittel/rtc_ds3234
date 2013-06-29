@@ -1,0 +1,14 @@
+[Unit]
+Description=Synchronise system time with RTC DS3234 on startup and shutdown
+ConditionPathExists=/home/root/spi/hwclock-spi
+Requires=dev-spidev2.0.device
+After=dev-spidev2.0.device
+After=remount-rootfs.service
+
+[Service]
+RemainAfterExit=yes
+ExecStart=/home/root/spi/hwclock-spi --hctosys
+ExecStop=/home/root/spi/hwclock-spi --systohc
+
+[Install]
+WantedBy=basic.target

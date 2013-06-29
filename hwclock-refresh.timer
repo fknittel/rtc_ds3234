@@ -1,0 +1,6 @@
+[Unit]
+Description=Regularly push system time to RTC DS3234
+
+[Timer]
+OnBootSec=1h
+OnUnitActiveSec=1h

@@ -1,0 +1,8 @@
+[Unit]
+Description=Push system time to RTC DS3234
+Requires=hwclock.service
+After=hwclock.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/root/spi/hwclock-spi --systohc
