@@ -118,7 +118,7 @@ def get_dt_from_device():
         return get_time(dev)
 
 def show_usage():
-    print >>sys.stderr, "Usage: {0} --hctosys|--systohc|--show".format(sys.argv[0])
+    print >>sys.stderr, "Usage: {0} --hctosys|--systohc|--show|--show-delta".format(sys.argv[0])
     sys.exit(1)
 
 if len(sys.argv) != 2:
